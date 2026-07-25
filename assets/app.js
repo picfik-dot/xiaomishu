@@ -127,6 +127,25 @@ async function api(path, options = {}) {
   }
 }
 
+async function persistAppData(nextData, { successMessage = '已保存', errorMessage = '保存失败' } = {}) {
+  const payload = normalizeData(nextData);
+  const res = await api('/api/data', { method: 'POST', body: JSON.stringify(payload) });
+  if (res && res.ok !== false) {
+    const savedData = normalizeData(res.data || payload);
+    APP_DATA = savedData;
+    writeLocalFallbackData(savedData);
+    updateStatusPill();
+    if (res.sync && res.sync.ok === false) {
+      showToast(res.sync.message || '数据已保存，但同步到坚果云失败', 'error');
+    } else {
+      showToast(successMessage, 'success');
+    }
+    return savedData;
+  }
+  writeLocalFallbackData(payload);
+  throw new Error(res?.message || errorMessage);
+}
+
 function normalizeData(payload) {
   const data = payload || {};
   const settings = data.settings || {};
@@ -239,13 +258,11 @@ function renderHome() {
 
 async function markItem(id, name) {
   const payload = normalizeData({ ...APP_DATA, records: [...(APP_DATA.records || []), { id: `rec-${Date.now()}`, itemId: id, categoryId: (APP_DATA.items || []).find(i => i.id === id)?.categoryId || '', value: 1, note: '', dateKey: todayKey() }] });
-  const res = await api('/api/data', { method: 'POST', body: JSON.stringify(payload) });
-  if (res.ok) {
-    APP_DATA = normalizeData(res.data || payload);
-    showToast(`已记录：${name}`, 'success');
+  try {
+    await persistAppData(payload, { successMessage: `已记录：${name}`, errorMessage: '记录失败' });
     renderPage(CURRENT_PAGE);
-  } else {
-    showToast('记录失败', 'error');
+  } catch (error) {
+    showToast(error.message || '记录失败', 'error');
   }
 }
 
@@ -308,25 +325,21 @@ function changeTimePlanDate(dateKey) {
 
 async function completeItem(itemId, name) {
   const payload = normalizeData({ ...APP_DATA, records: [...(APP_DATA.records || []), { id: `rec-${Date.now()}`, itemId, categoryId: (APP_DATA.items || []).find(item => item.id === itemId)?.categoryId || '', value: 1, note: '', dateKey: window._selectedDate || todayKey() }] });
-  const res = await api('/api/data', { method: 'POST', body: JSON.stringify(payload) });
-  if (res.ok) {
-    APP_DATA = normalizeData(res.data || payload);
-    showToast(`已完成：${name}`, 'success');
+  try {
+    await persistAppData(payload, { successMessage: `已完成：${name}`, errorMessage: '保存失败' });
     renderPage('timeplan');
-  } else {
-    showToast('保存失败', 'error');
+  } catch (error) {
+    showToast(error.message || '保存失败', 'error');
   }
 }
 
 async function delayItem(itemId, name) {
   const payload = normalizeData({ ...APP_DATA, records: [...(APP_DATA.records || []), { id: `rec-${Date.now()}`, itemId, categoryId: (APP_DATA.items || []).find(item => item.id === itemId)?.categoryId || '', value: 0, note: '已延迟', dateKey: window._selectedDate || todayKey(), delayedTime: Date.now() }] });
-  const res = await api('/api/data', { method: 'POST', body: JSON.stringify(payload) });
-  if (res.ok) {
-    APP_DATA = normalizeData(res.data || payload);
-    showToast(`已记录延迟：${name}`, 'success');
+  try {
+    await persistAppData(payload, { successMessage: `已记录延迟：${name}`, errorMessage: '保存失败' });
     renderPage('timeplan');
-  } else {
-    showToast('保存失败', 'error');
+  } catch (error) {
+    showToast(error.message || '保存失败', 'error');
   }
 }
 
@@ -589,22 +602,10 @@ function renderSettings() {
 
 async function saveSettings() {
   const nextData = normalizeData({ ...APP_DATA, settings: { ...APP_DATA.settings, nutstore: { enabled: document.getElementById('syncEnabled').checked, username: document.getElementById('syncUser').value, password: document.getElementById('syncPassword').value, baseUrl: document.getElementById('syncUrl').value, remotePath: document.getElementById('syncPath').value } } });
-  const res = await api('/api/data', { method: 'POST', body: JSON.stringify(nextData) });
-  if (res && res.ok !== false) {
-    APP_DATA = normalizeData(res?.data || nextData);
-    writeLocalFallbackData(APP_DATA);
-    updateStatusPill();
-    if (APP_DATA.settings?.nutstore?.enabled) {
-      const syncRes = await api('/api/sync-now', { method: 'POST' });
-      const msg = syncRes?.sync?.ok === false ? (syncRes.sync.message || '坚果云同步失败') : '设置已保存并已同步到坚果云';
-      showToast(msg, syncRes?.sync?.ok === false ? 'error' : 'success');
-    } else {
-      showToast('设置已保存', 'success');
-    }
-  } else {
-    APP_DATA = normalizeData(nextData);
-    writeLocalFallbackData(APP_DATA);
-    showToast(res?.message || '设置已保存', 'success');
+  try {
+    await persistAppData(nextData, { successMessage: '设置已保存', errorMessage: '设置保存失败' });
+  } catch (error) {
+    showToast(error.message || '设置保存失败', 'error');
   }
 }
 
@@ -649,9 +650,13 @@ async function submitCategory(id) {
     categories.push({ id: `cat-${Date.now()}`, ...payload });
   }
   const nextData = normalizeData({ ...APP_DATA, categories });
-  const res = await api('/api/data', { method: 'POST', body: JSON.stringify(nextData) });
-  if (res.ok) { APP_DATA = normalizeData(res.data || nextData); closeModal(); renderPage('categories'); showToast(id ? '分类已更新' : '分类已创建', 'success'); }
-  else showToast('保存失败', 'error');
+  try {
+    await persistAppData(nextData, { successMessage: id ? '分类已更新' : '分类已创建', errorMessage: '保存失败' });
+    closeModal();
+    renderPage('categories');
+  } catch (error) {
+    showToast(error.message || '保存失败', 'error');
+  }
 }
 
 async function deleteCategory(id) {
@@ -659,9 +664,12 @@ async function deleteCategory(id) {
   const items = (APP_DATA.items || []).filter(item => item.categoryId !== id);
   const records = (APP_DATA.records || []).filter(record => !items.some(item => item.id === record.itemId) && !items.some(item => item.categoryId === id));
   const nextData = normalizeData({ ...APP_DATA, categories: (APP_DATA.categories || []).filter(cat => cat.id !== id), items, records });
-  const res = await api('/api/data', { method: 'POST', body: JSON.stringify(nextData) });
-  if (res.ok) { APP_DATA = normalizeData(res.data || nextData); renderPage('categories'); showToast('分类已删除', 'success'); }
-  else showToast('删除失败', 'error');
+  try {
+    await persistAppData(nextData, { successMessage: '分类已删除', errorMessage: '删除失败' });
+    renderPage('categories');
+  } catch (error) {
+    showToast(error.message || '删除失败', 'error');
+  }
 }
 
 function openItemModal(id = null) {
@@ -696,9 +704,13 @@ async function submitItem(id) {
     items.push({ id: `item-${Date.now()}`, ...payload, createdAt: new Date().toISOString() });
   }
   const nextData = normalizeData({ ...APP_DATA, items });
-  const res = await api('/api/data', { method: 'POST', body: JSON.stringify(nextData) });
-  if (res.ok) { APP_DATA = normalizeData(res.data || nextData); closeModal(); renderPage('timeplan'); showToast(id ? '事项已更新' : '事项已创建', 'success'); }
-  else showToast('保存失败', 'error');
+  try {
+    await persistAppData(nextData, { successMessage: id ? '事项已更新' : '事项已创建', errorMessage: '保存失败' });
+    closeModal();
+    renderPage('timeplan');
+  } catch (error) {
+    showToast(error.message || '保存失败', 'error');
+  }
 }
 
 function openFinanceModal(kind, entry = null) {
@@ -787,18 +799,25 @@ async function submitFinance(kind, id) {
     }
   }
   const nextData = normalizeData({ ...APP_DATA, finance });
-  const res = await api('/api/data', { method: 'POST', body: JSON.stringify(nextData) });
-  if (res.ok) { APP_DATA = normalizeData(res.data || nextData); closeModal(); renderPage('finance'); showToast('财务记录已保存', 'success'); }
-  else showToast('保存失败', 'error');
+  try {
+    await persistAppData(nextData, { successMessage: '财务记录已保存', errorMessage: '保存失败' });
+    closeModal();
+    renderPage('finance');
+  } catch (error) {
+    showToast(error.message || '保存失败', 'error');
+  }
 }
 
 async function updateCash() {
   const value = Number(document.getElementById('cashInput').value || 0);
   const finance = { ...APP_DATA.finance, profile: { ...(APP_DATA.finance?.profile || {}), cash: value } };
   const nextData = normalizeData({ ...APP_DATA, finance });
-  const res = await api('/api/data', { method: 'POST', body: JSON.stringify(nextData) });
-  if (res.ok) { APP_DATA = normalizeData(res.data || nextData); renderPage('finance'); showToast('现金余额已更新', 'success'); }
-  else showToast('保存失败', 'error');
+  try {
+    await persistAppData(nextData, { successMessage: '现金余额已更新', errorMessage: '保存失败' });
+    renderPage('finance');
+  } catch (error) {
+    showToast(error.message || '保存失败', 'error');
+  }
 }
 
 async function deleteFinanceEntry(kind, id, name) {
@@ -809,9 +828,12 @@ async function deleteFinanceEntry(kind, id, name) {
   if (kind === 'income') finance.incomes = (finance.incomes || []).filter(item => item.id !== id);
   if (kind === 'expense') finance.expenses = (finance.expenses || []).filter(item => item.id !== id);
   const nextData = normalizeData({ ...APP_DATA, finance });
-  const res = await api('/api/data', { method: 'POST', body: JSON.stringify(nextData) });
-  if (res.ok) { APP_DATA = normalizeData(res.data || nextData); renderPage('finance'); showToast('已删除', 'success'); }
-  else showToast('删除失败', 'error');
+  try {
+    await persistAppData(nextData, { successMessage: '已删除', errorMessage: '删除失败' });
+    renderPage('finance');
+  } catch (error) {
+    showToast(error.message || '删除失败', 'error');
+  }
 }
 
 function openHealthModal(kind, entry = null) {
@@ -891,9 +913,13 @@ async function submitHealth(kind, id) {
     health.waistMeasurements = [...(health.waistMeasurements || [])];
     health.waistMeasurements.push({ id: `waist-${Date.now()}`, waist: Number(document.getElementById('healthWaist').value || 0), note: document.getElementById('healthNote').value.trim(), timestamp: now, dateKey: todayKey() });
   }
-  const res = await api('/api/data', { method: 'POST', body: JSON.stringify(normalizeData({ ...APP_DATA, health })) });
-  if (res.ok) { APP_DATA = normalizeData(res.data || nextData); closeModal(); renderPage('health'); showToast('健康记录已保存', 'success'); }
-  else showToast('保存失败', 'error');
+  try {
+    await persistAppData(normalizeData({ ...APP_DATA, health }), { successMessage: '健康记录已保存', errorMessage: '保存失败' });
+    closeModal();
+    renderPage('health');
+  } catch (error) {
+    showToast(error.message || '保存失败', 'error');
+  }
 }
 
 async function deleteHealthEntry(kind, id, name) {
@@ -906,9 +932,12 @@ async function deleteHealthEntry(kind, id, name) {
   if (kind === 'weight') health.weights = (health.weights || []).filter(item => item.id !== id);
   if (kind === 'waist') health.waistMeasurements = (health.waistMeasurements || []).filter(item => item.id !== id);
   const nextData = normalizeData({ ...APP_DATA, health });
-  const res = await api('/api/data', { method: 'POST', body: JSON.stringify(nextData) });
-  if (res.ok) { APP_DATA = normalizeData(res.data || nextData); renderPage('health'); showToast('已删除', 'success'); }
-  else showToast('删除失败', 'error');
+  try {
+    await persistAppData(nextData, { successMessage: '已删除', errorMessage: '删除失败' });
+    renderPage('health');
+  } catch (error) {
+    showToast(error.message || '删除失败', 'error');
+  }
 }
 
 function getMedicationName(medId) {
