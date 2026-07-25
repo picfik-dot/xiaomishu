@@ -24,6 +24,27 @@ let APP_DATA = {
   health: { meds: [], bloodPressures: [], heartRates: [], weights: [], waistMeasurements: [], medicationLogs: [] }
 };
 let CURRENT_PAGE = 'home';
+const LOCAL_STORAGE_KEY = 'xiaomishu-local-data-v1';
+
+function readLocalFallbackData() {
+  try {
+    const raw = window.localStorage?.getItem(LOCAL_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    console.warn('读取本地数据失败', error);
+    return null;
+  }
+}
+
+function writeLocalFallbackData(data) {
+  try {
+    window.localStorage?.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+    return true;
+  } catch (error) {
+    console.warn('写入本地数据失败', error);
+    return false;
+  }
+}
 
 function todayKey() {
   const now = new Date();
@@ -56,10 +77,41 @@ function showToast(message, type = 'info') {
   window._toastTimer = setTimeout(() => toast.classList.add('hidden'), 2500);
 }
 
+function resolveAppUrl(path) {
+  if (typeof window !== 'undefined' && window.XMCompat?.resolveUrl) {
+    return window.XMCompat.resolveUrl(path, window.location.href);
+  }
+  return path;
+}
+
 async function api(path, options = {}) {
-  const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, ...options });
-  const text = await res.text();
-  try { return text ? JSON.parse(text) : { ok: res.ok }; } catch { return { ok: res.ok, message: '解析失败' }; }
+  const resolvedPath = resolveAppUrl(path);
+  const method = options.method || 'POST';
+  try {
+    const res = await fetch(resolvedPath, { method, headers: { 'Content-Type': 'application/json' }, ...options });
+    const text = await res.text();
+    try { return text ? JSON.parse(text) : { ok: res.ok }; } catch { return { ok: res.ok, message: '解析失败' }; }
+  } catch (error) {
+    console.warn('API request failed, falling back to local state:', error);
+    if (path.includes('/api/data')) {
+      if (method === 'GET') {
+        const localData = readLocalFallbackData();
+        return { ok: true, data: normalizeData(localData || APP_DATA), message: '使用本地缓存数据' };
+      }
+      let bodyData = null;
+      try { bodyData = options.body ? JSON.parse(options.body) : null; } catch { bodyData = null; }
+      if (bodyData) {
+        const nextData = normalizeData(bodyData);
+        writeLocalFallbackData(nextData);
+        APP_DATA = nextData;
+        return { ok: true, data: nextData, message: '已保存到本地' };
+      }
+    }
+    if (path.includes('/api/sync-now')) {
+      return { ok: true, message: '本地模式下无需同步' };
+    }
+    return { ok: false, message: '网络不可用，已切换为本地模式' };
+  }
 }
 
 function normalizeData(payload) {
@@ -867,17 +919,23 @@ document.querySelectorAll('[data-page]').forEach(el => {
 
 async function initialize() {
   try {
-    const res = await fetch('/api/data');
-    const payload = await res.json();
-    APP_DATA = normalizeData(payload.data || payload);
+    const result = await api('/api/data', { method: 'GET' });
+    if (result?.data) {
+      APP_DATA = normalizeData(result.data);
+    } else {
+      APP_DATA = normalizeData(readLocalFallbackData() || APP_DATA);
+    }
     updateStatusPill();
     renderPage('home');
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js').catch(console.error);
+      navigator.serviceWorker.register('./service-worker.js').catch(console.error);
     }
   } catch (error) {
     console.error(error);
-    showToast('初始化失败', 'error');
+    APP_DATA = normalizeData(readLocalFallbackData() || APP_DATA);
+    updateStatusPill();
+    renderPage('home');
+    showToast('后端不可用，已使用本地演示数据', 'info');
   }
 }
 
