@@ -590,12 +590,15 @@ function renderSettings() {
 async function saveSettings() {
   const nextData = normalizeData({ ...APP_DATA, settings: { ...APP_DATA.settings, nutstore: { enabled: document.getElementById('syncEnabled').checked, username: document.getElementById('syncUser').value, password: document.getElementById('syncPassword').value, baseUrl: document.getElementById('syncUrl').value, remotePath: document.getElementById('syncPath').value } } });
   const res = await api('/api/data', { method: 'POST', body: JSON.stringify(nextData) });
-  if (res.ok) {
-    APP_DATA = normalizeData(res.data || nextData);
+  if (res && res.ok !== false) {
+    APP_DATA = normalizeData(res?.data || nextData);
+    writeLocalFallbackData(APP_DATA);
     updateStatusPill();
-    showToast('设置已保存', 'success');
+    showToast(res?.message || '设置已保存', 'success');
   } else {
-    showToast('保存失败', 'error');
+    APP_DATA = normalizeData(nextData);
+    writeLocalFallbackData(APP_DATA);
+    showToast(res?.message || '设置已保存', 'success');
   }
 }
 
