@@ -12,6 +12,7 @@ const DEFAULT_SETTINGS = {
   language: 'zh-CN',
   notificationEnabled: true,
   remindAheadMinutes: 0,
+  backend: { baseUrl: '' },
   nutstore: { enabled: false, baseUrl: 'https://dav.jianguoyun.com/dav/', username: '', password: '', remotePath: '小秘书/app-data.json' }
 };
 
@@ -82,6 +83,15 @@ function resolveAppUrl(path) {
     return window.XMCompat.resolveUrl(path, window.location.href);
   }
   return path;
+}
+
+function buildApiUrl(path) {
+  const backendBase = String(APP_DATA.settings?.backend?.baseUrl || '').trim();
+  if (!backendBase) return resolveAppUrl(path);
+  if (/^(https?:)?\/\//i.test(path)) return path;
+  const normalizedBase = backendBase.endsWith('/') ? backendBase.slice(0, -1) : backendBase;
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${normalizedBase}${normalizedPath}`;
 }
 
 function toBase64(value) {
@@ -174,7 +184,7 @@ function fallbackApiResponse(path, method, options = {}) {
 }
 
 async function api(path, options = {}) {
-  const resolvedPath = resolveAppUrl(path);
+  const resolvedPath = buildApiUrl(path);
   const method = options.method || 'POST';
   try {
     const res = await fetch(resolvedPath, { method, headers: { 'Content-Type': 'application/json' }, ...options });
@@ -231,6 +241,7 @@ function normalizeData(payload) {
     settings: {
       ...DEFAULT_SETTINGS,
       ...settings,
+      backend: { ...DEFAULT_SETTINGS.backend, ...(settings.backend || {}) },
       nutstore: { ...DEFAULT_SETTINGS.nutstore, ...(settings.nutstore || {}) }
     },
     finance: {
@@ -659,6 +670,11 @@ function renderSettings() {
           <input id="syncPassword" class="input" type="password" value="${escapeHtml(nutstore.password || '')}">
         </div>
         <div>
+          <label class="label">后端 API 地址</label>
+          <input id="apiBaseUrl" class="input" placeholder="例如 https://your-backend.example.com" value="${escapeHtml(APP_DATA.settings?.backend?.baseUrl || '')}">
+          <p class="text-xs text-ink-500 mt-1">如果前端部署到 GitHub Pages，请填写后端服务 URL。</p>
+        </div>
+        <div>
           <label class="label">同步地址</label>
           <input id="syncUrl" class="input" value="${escapeHtml(nutstore.baseUrl || 'https://dav.jianguoyun.com/dav/')}">
         </div>
@@ -676,7 +692,20 @@ function renderSettings() {
 }
 
 async function saveSettings() {
-  const nextData = normalizeData({ ...APP_DATA, settings: { ...APP_DATA.settings, nutstore: { enabled: document.getElementById('syncEnabled').checked, username: document.getElementById('syncUser').value, password: document.getElementById('syncPassword').value, baseUrl: document.getElementById('syncUrl').value, remotePath: document.getElementById('syncPath').value } } });
+  const nextData = normalizeData({
+    ...APP_DATA,
+    settings: {
+      ...APP_DATA.settings,
+      backend: { ...APP_DATA.settings.backend, baseUrl: document.getElementById('apiBaseUrl').value },
+      nutstore: {
+        enabled: document.getElementById('syncEnabled').checked,
+        username: document.getElementById('syncUser').value,
+        password: document.getElementById('syncPassword').value,
+        baseUrl: document.getElementById('syncUrl').value,
+        remotePath: document.getElementById('syncPath').value
+      }
+    }
+  });
   try {
     await persistAppData(nextData, { successMessage: '设置已保存', errorMessage: '设置保存失败' });
   } catch (error) {

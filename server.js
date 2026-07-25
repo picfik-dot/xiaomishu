@@ -111,7 +111,14 @@ async function syncToNutstore(data) {
   return { ok: true, synced: true, status: response.status };
 }
 
+function addCorsHeaders(res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+}
+
 function sendJson(res, statusCode, payload) {
+  addCorsHeaders(res);
   res.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(payload));
 }
@@ -126,6 +133,11 @@ function serveFile(res, filePath) {
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
+  if (req.method === 'OPTIONS') {
+    addCorsHeaders(res);
+    res.writeHead(204);
+    return res.end();
+  }
 
   if (req.method === 'GET' && url.pathname === '/api/data') {
     const data = readData();

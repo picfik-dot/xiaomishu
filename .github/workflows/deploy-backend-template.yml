@@ -1,0 +1,49 @@
+name: Backend Deploy (TEMPLATE)
+
+# 说明：这是一个模板工作流，展示如何把后端自动部署到 Fly.io（或其他提供商）。
+# 注意：要启用真正的自动部署，你需要在仓库 Settings → Secrets 中添加对应的 API token（例如 FLY_API_TOKEN），
+# 并按注释中说明修改 `deploy` 步骤。模板不会在没有 secrets 的情况下替你完成部署。
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy-template:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: |
+          npm ci --prefer-offline --no-audit || true
+
+      - name: Build (no-op for simple server)
+        run: |
+          echo "No build step required for this repository."
+
+      - name: Deploy placeholder
+        run: |
+          echo "This is a template. To enable real deployment, edit this workflow and add provider-specific steps."
+          echo "Examples: use flyctl (requires FLY_API_TOKEN secret), or call Render API with RENDER_API_KEY."
+
+# Example (commented): Fly.io deploy
+# - name: Install flyctl
+#   run: curl -L https://fly.io/install.sh | sh
+# - name: Deploy to Fly
+#   env:
+#     FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+#   run: |
+#     export FLYCTL_INSTALL="${{ github.workspace }}/.fly"
+#     PATH="$PATH:${{ github.workspace }}/.fly/bin"
+#     curl -L https://fly.io/install.sh | sh
+#     flyctl deploy --config fly.toml --remote-only
+
+# Example (commented): Render via API or official action

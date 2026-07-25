@@ -110,7 +110,7 @@ def ensure_remote_directory(base_url, remote_path, auth):
 def sync_to_nutstore(data):
     nutstore = data.get('settings', {}).get('nutstore', {})
     if not nutstore.get('enabled') or not nutstore.get('username') or not nutstore.get('password'):
-        return {'ok': True, 'skipped': True}
+        return {'ok': True, 'skipped': True, 'message': '未启用坚果云同步'}
     base_url = nutstore.get('baseUrl', 'https://dav.jianguoyun.com/dav/')
     remote_path = nutstore.get('remotePath', '小秘书/app-data.json')
     url = build_sync_url(base_url, remote_path)
@@ -120,7 +120,7 @@ def sync_to_nutstore(data):
         ensure_remote_directory(base_url, remote_path, auth)
         req = Request(url, data=body, method='PUT', headers={'Authorization': f'Basic {auth}', 'Content-Type': 'application/json; charset=utf-8'})
         with urlopen(req, timeout=10) as response:
-            return {'ok': True, 'synced': True, 'status': getattr(response, 'status', 200)}
+            return {'ok': True, 'synced': True, 'status': getattr(response, 'status', 200), 'message': f'已上传到 {remote_path}'}
     except HTTPError as exc:
         return {'ok': False, 'message': f'同步失败: {exc.code} {exc.reason}', 'status': exc.code}
     except Exception as exc:
