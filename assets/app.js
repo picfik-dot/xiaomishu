@@ -84,6 +84,74 @@ function resolveAppUrl(path) {
   return path;
 }
 
+function toBase64(value) {
+  if (typeof window !== 'undefined' && typeof window.btoa === 'function') {
+    const bytes = new TextEncoder().encode(value);
+    let binary = '';
+    bytes.forEach(byte => { binary += String.fromCharCode(byte); });
+    return window.btoa(binary);
+  }
+  return '';
+}
+
+function buildWebDavUrl(baseUrl, remotePath) {
+  const base = String(baseUrl || '').trim();
+  const path = String(remotePath || '').trim().replace(/^\/+/, '').replace(/\/+/, '/');
+  if (!base) return '';
+  const normalizedBase = base.endsWith('/') ? base : `${base}/`;
+  return `${normalizedBase}${path}`;
+}
+
+function collectWebDavParentPaths(remotePath) {
+  const path = String(remotePath || '').trim().replace(/^\/+/, '').replace(/\/+/, '/');
+  if (!path) return [];
+  const parts = path.split('/').filter(Boolean);
+  if (parts.length <= 1) return [];
+  return parts.slice(0, -1).map((_, index) => parts.slice(0, index + 1).join('/'));
+}
+
+async function syncToNutstoreDirect(payload) {
+  const nutstore = APP_DATA.settings?.nutstore || {};
+  const enabled = Boolean(nutstore.enabled);
+  const username = String(nutstore.username || '').trim();
+  const password = String(nutstore.password || '').trim();
+  const baseUrl = String(nutstore.baseUrl || 'https://dav.jianguoyun.com/dav/').trim();
+  const remotePath = String(nutstore.remotePath || '小秘书/app-data.json').trim();
+
+  if (!enabled || !username || !password || !baseUrl || !remotePath) {
+    return { ok: false, message: '请先在设置中填写坚果云同步信息' };
+  }
+
+  const authHeader = `Basic ${toBase64(`${username}:${password}`)}`;
+  const fileUrl = buildWebDavUrl(baseUrl, remotePath);
+  const headers = {
+    Authorization: authHeader,
+    'Content-Type': 'application/json; charset=utf-8'
+  };
+
+  try {
+    const parents = collectWebDavParentPaths(remotePath);
+    for (const parent of parents) {
+      const parentUrl = buildWebDavUrl(baseUrl, parent);
+      try {
+        await fetch(parentUrl, { method: 'MKCOL', headers });
+      } catch (error) {
+        console.warn('创建坚果云目录失败，继续尝试上传', parent, error);
+      }
+    }
+
+    await fetch(fileUrl, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(payload, null, 2)
+    });
+
+    return { ok: true, synced: true, message: `已通过浏览器直连上传到 ${remotePath}` };
+  } catch (error) {
+    return { ok: false, message: `同步失败: ${error?.message || '网络请求失败'}` };
+  }
+}
+
 function fallbackApiResponse(path, method, options = {}) {
   if (path.includes('/api/data')) {
     if (method === 'GET') {
@@ -130,20 +198,27 @@ async function api(path, options = {}) {
 async function persistAppData(nextData, { successMessage = '已保存', errorMessage = '保存失败' } = {}) {
   const payload = normalizeData(nextData);
   const res = await api('/api/data', { method: 'POST', body: JSON.stringify(payload) });
-  if (res && res.ok !== false) {
-    const savedData = normalizeData(res.data || payload);
-    APP_DATA = savedData;
-    writeLocalFallbackData(savedData);
-    updateStatusPill();
-    if (res.sync && res.sync.ok === false) {
-      showToast(res.sync.message || '数据已保存，但同步到坚果云失败', 'error');
-    } else {
-      showToast(successMessage, 'success');
-    }
-    return savedData;
+  const savedData = normalizeData(res?.data || payload);
+  APP_DATA = savedData;
+  writeLocalFallbackData(savedData);
+  updateStatusPill();
+
+  if (res && res.ok === false) {
+    throw new Error(res?.message || errorMessage);
   }
-  writeLocalFallbackData(payload);
-  throw new Error(res?.message || errorMessage);
+
+  if (savedData.settings?.nutstore?.enabled) {
+    const syncResult = await syncToNutstoreDirect(savedData);
+    if (syncResult.ok === false) {
+      showToast(syncResult.message || '数据已保存，但同步到坚果云失败', 'error');
+    } else {
+      showToast(syncResult.message || successMessage, 'success');
+    }
+  } else {
+    showToast(successMessage, 'success');
+  }
+
+  return savedData;
 }
 
 function normalizeData(payload) {
@@ -618,10 +693,11 @@ async function syncNow(event) {
     button.textContent = '同步中...';
   }
   try {
-    const payload = await api('/api/sync-now', { method: 'POST' });
-    const syncOk = payload?.sync?.ok !== false && payload?.ok !== false;
-    const message = payload?.sync?.message || payload?.message || (syncOk ? '同步完成' : '同步失败');
+    const syncResult = await syncToNutstoreDirect(APP_DATA);
+    const syncOk = syncResult?.ok !== false;
+    const message = syncResult?.message || (syncOk ? '同步完成' : '同步失败');
     showToast(message, syncOk ? 'success' : 'error');
+    console.log('WebDAV sync result:', syncResult);
   } catch (error) {
     showToast(error?.message || '同步失败，请稍后再试', 'error');
   } finally {
