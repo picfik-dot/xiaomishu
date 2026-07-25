@@ -184,38 +184,15 @@ function fallbackApiResponse(path, method, options = {}) {
 }
 
 async function api(path, options = {}) {
-  const resolvedPath = buildApiUrl(path);
-  const method = options.method || 'POST';
-  try {
-    const res = await fetch(resolvedPath, { method, headers: { 'Content-Type': 'application/json' }, ...options });
-    const text = await res.text();
-    if (!res.ok) {
-      console.warn('API request returned non-OK response:', res.status, path);
-      return fallbackApiResponse(path, method, options);
-    }
-    try {
-      return text ? JSON.parse(text) : { ok: true };
-    } catch (error) {
-      console.warn('API response was not valid JSON:', error);
-      return fallbackApiResponse(path, method, options);
-    }
-  } catch (error) {
-    console.warn('API request failed, falling back to local state:', error);
-    return fallbackApiResponse(path, method, options);
-  }
+  return fallbackApiResponse(path, options.method || 'POST', options);
 }
 
 async function persistAppData(nextData, { successMessage = '已保存', errorMessage = '保存失败' } = {}) {
   const payload = normalizeData(nextData);
-  const res = await api('/api/data', { method: 'POST', body: JSON.stringify(payload) });
-  const savedData = normalizeData(res?.data || payload);
+  const savedData = normalizeData(payload);
   APP_DATA = savedData;
   writeLocalFallbackData(savedData);
   updateStatusPill();
-
-  if (res && res.ok === false) {
-    throw new Error(res?.message || errorMessage);
-  }
 
   if (savedData.settings?.nutstore?.enabled) {
     const syncResult = await syncToNutstoreDirect(savedData);
