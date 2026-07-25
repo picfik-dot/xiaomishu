@@ -1,0 +1,9 @@
+{
+  "name": "xiaomishu-pwa",
+  "version": "1.0.0",
+  "private": true,
+  "description": "工作生活小秘书 PWA 版本",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
