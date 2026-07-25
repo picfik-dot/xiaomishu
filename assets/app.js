@@ -100,7 +100,7 @@ function fallbackApiResponse(path, method, options = {}) {
     }
   }
   if (path.includes('/api/sync-now')) {
-    return { ok: true, message: '本地模式下无需同步' };
+    return { ok: false, message: '当前页面没有可用后端，立即同步无法执行' };
   }
   return { ok: false, message: '网络不可用，已切换为本地模式' };
 }
@@ -592,8 +592,8 @@ function renderSettings() {
           <input id="syncPath" class="input" value="${escapeHtml(nutstore.remotePath || '小秘书/app-data.json')}">
         </div>
         <div class="flex gap-2">
-          <button class="btn-primary" onclick="saveSettings()">保存设置</button>
-          <button class="btn-outline" onclick="syncNow()">立即同步</button>
+          <button class="btn-primary" type="button" onclick="saveSettings()">保存设置</button>
+          <button id="syncNowBtn" class="btn-outline" type="button" onclick="syncNow(event)">立即同步</button>
         </div>
       </section>
     </div>`;
@@ -609,9 +609,27 @@ async function saveSettings() {
   }
 }
 
-async function syncNow() {
-  const payload = await api('/api/sync-now', { method: 'POST' });
-  if (payload.ok) showToast(payload.message || '同步完成', 'success'); else showToast(payload.message || '同步失败', 'error');
+async function syncNow(event) {
+  if (event?.preventDefault) event.preventDefault();
+  if (event?.stopPropagation) event.stopPropagation();
+  const button = document.getElementById('syncNowBtn');
+  if (button) {
+    button.disabled = true;
+    button.textContent = '同步中...';
+  }
+  try {
+    const payload = await api('/api/sync-now', { method: 'POST' });
+    const syncOk = payload?.sync?.ok !== false && payload?.ok !== false;
+    const message = payload?.sync?.message || payload?.message || (syncOk ? '同步完成' : '同步失败');
+    showToast(message, syncOk ? 'success' : 'error');
+  } catch (error) {
+    showToast(error?.message || '同步失败，请稍后再试', 'error');
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = '立即同步';
+    }
+  }
 }
 
 function openCategoryModal(id = null) {
