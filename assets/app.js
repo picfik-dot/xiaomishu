@@ -594,7 +594,13 @@ async function saveSettings() {
     APP_DATA = normalizeData(res?.data || nextData);
     writeLocalFallbackData(APP_DATA);
     updateStatusPill();
-    showToast(res?.message || '设置已保存', 'success');
+    if (APP_DATA.settings?.nutstore?.enabled) {
+      const syncRes = await api('/api/sync-now', { method: 'POST' });
+      const msg = syncRes?.sync?.ok === false ? (syncRes.sync.message || '坚果云同步失败') : '设置已保存并已同步到坚果云';
+      showToast(msg, syncRes?.sync?.ok === false ? 'error' : 'success');
+    } else {
+      showToast('设置已保存', 'success');
+    }
   } else {
     APP_DATA = normalizeData(nextData);
     writeLocalFallbackData(APP_DATA);
