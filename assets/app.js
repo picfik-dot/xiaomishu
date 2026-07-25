@@ -84,33 +84,46 @@ function resolveAppUrl(path) {
   return path;
 }
 
+function fallbackApiResponse(path, method, options = {}) {
+  if (path.includes('/api/data')) {
+    if (method === 'GET') {
+      const localData = readLocalFallbackData();
+      return { ok: true, data: normalizeData(localData || APP_DATA), message: '使用本地缓存数据' };
+    }
+    let bodyData = null;
+    try { bodyData = options.body ? JSON.parse(options.body) : null; } catch { bodyData = null; }
+    if (bodyData) {
+      const nextData = normalizeData(bodyData);
+      writeLocalFallbackData(nextData);
+      APP_DATA = nextData;
+      return { ok: true, data: nextData, message: '已保存到本地' };
+    }
+  }
+  if (path.includes('/api/sync-now')) {
+    return { ok: true, message: '本地模式下无需同步' };
+  }
+  return { ok: false, message: '网络不可用，已切换为本地模式' };
+}
+
 async function api(path, options = {}) {
   const resolvedPath = resolveAppUrl(path);
   const method = options.method || 'POST';
   try {
     const res = await fetch(resolvedPath, { method, headers: { 'Content-Type': 'application/json' }, ...options });
     const text = await res.text();
-    try { return text ? JSON.parse(text) : { ok: res.ok }; } catch { return { ok: res.ok, message: '解析失败' }; }
+    if (!res.ok) {
+      console.warn('API request returned non-OK response:', res.status, path);
+      return fallbackApiResponse(path, method, options);
+    }
+    try {
+      return text ? JSON.parse(text) : { ok: true };
+    } catch (error) {
+      console.warn('API response was not valid JSON:', error);
+      return fallbackApiResponse(path, method, options);
+    }
   } catch (error) {
     console.warn('API request failed, falling back to local state:', error);
-    if (path.includes('/api/data')) {
-      if (method === 'GET') {
-        const localData = readLocalFallbackData();
-        return { ok: true, data: normalizeData(localData || APP_DATA), message: '使用本地缓存数据' };
-      }
-      let bodyData = null;
-      try { bodyData = options.body ? JSON.parse(options.body) : null; } catch { bodyData = null; }
-      if (bodyData) {
-        const nextData = normalizeData(bodyData);
-        writeLocalFallbackData(nextData);
-        APP_DATA = nextData;
-        return { ok: true, data: nextData, message: '已保存到本地' };
-      }
-    }
-    if (path.includes('/api/sync-now')) {
-      return { ok: true, message: '本地模式下无需同步' };
-    }
-    return { ok: false, message: '网络不可用，已切换为本地模式' };
+    return fallbackApiResponse(path, method, options);
   }
 }
 
@@ -587,9 +600,8 @@ async function saveSettings() {
 }
 
 async function syncNow() {
-  const res = await fetch('/api/sync-now', { method: 'POST' });
-  const payload = await res.json();
-  if (payload.ok) showToast('同步完成', 'success'); else showToast(payload.message || '同步失败', 'error');
+  const payload = await api('/api/sync-now', { method: 'POST' });
+  if (payload.ok) showToast(payload.message || '同步完成', 'success'); else showToast(payload.message || '同步失败', 'error');
 }
 
 function openCategoryModal(id = null) {
