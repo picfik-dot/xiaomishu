@@ -1,0 +1,247 @@
+{
+  "categories": [
+    {
+      "id": "cat-health",
+      "name": "健康",
+      "icon": "heart",
+      "color": "#10B981",
+      "description": "保持身心健康",
+      "order": 1
+    },
+    {
+      "id": "cat-work",
+      "name": "工作",
+      "icon": "briefcase",
+      "color": "#3B82F6",
+      "description": "工作相关",
+      "order": 2
+    },
+    {
+      "id": "cat-study",
+      "name": "学习",
+      "icon": "book-open",
+      "color": "#8B5CF6",
+      "description": "持续学习",
+      "order": 3
+    },
+    {
+      "id": "cat-1784884516466",
+      "name": "fuye",
+      "description": "dfad",
+      "icon": "book-open",
+      "color": "#F97316",
+      "order": 0
+    }
+  ],
+  "items": [
+    {
+      "id": "item-water",
+      "categoryId": "cat-health",
+      "name": "喝水",
+      "unit": "ml",
+      "target": 2000,
+      "planTime": "09:00",
+      "duration": 5,
+      "createdAt": "2026-07-24T00:00:00.000Z"
+    },
+    {
+      "id": "item-sport",
+      "categoryId": "cat-health",
+      "name": "运动",
+      "unit": "分钟",
+      "target": 30,
+      "planTime": "18:30",
+      "duration": 30,
+      "createdAt": "2026-07-24T00:00:00.000Z"
+    },
+    {
+      "id": "item-sleep",
+      "categoryId": "cat-health",
+      "name": "睡眠",
+      "unit": "小时",
+      "target": 8,
+      "planTime": "23:00",
+      "duration": 480,
+      "createdAt": "2026-07-24T00:00:00.000Z"
+    },
+    {
+      "id": "item-focus",
+      "categoryId": "cat-work",
+      "name": "专注工作",
+      "unit": "小时",
+      "target": 6,
+      "planTime": "09:30",
+      "duration": 360,
+      "createdAt": "2026-07-24T00:00:00.000Z"
+    },
+    {
+      "id": "item-pomodoro",
+      "categoryId": "cat-work",
+      "name": "番茄钟",
+      "unit": "个",
+      "target": 8,
+      "planTime": "10:00",
+      "duration": 25,
+      "createdAt": "2026-07-24T00:00:00.000Z"
+    },
+    {
+      "id": "item-read",
+      "categoryId": "cat-study",
+      "name": "阅读",
+      "unit": "页",
+      "target": 30,
+      "planTime": "21:00",
+      "duration": 30,
+      "createdAt": "2026-07-24T00:00:00.000Z"
+    },
+    {
+      "id": "item-write",
+      "categoryId": "cat-study",
+      "name": "写作",
+      "unit": "字",
+      "target": 500,
+      "planTime": "20:00",
+      "duration": 60,
+      "createdAt": "2026-07-24T00:00:00.000Z"
+    },
+    {
+      "id": "item-1784876483165",
+      "categoryId": "cat-health",
+      "name": "1",
+      "unit": "次",
+      "target": 1,
+      "planTime": "22:20",
+      "duration": 30,
+      "createdAt": "2026-07-24T07:01:23.165Z"
+    },
+    {
+      "id": "item-1784883112428",
+      "name": "的",
+      "categoryId": "cat-health",
+      "unit": "次",
+      "target": 1,
+      "planTime": "04:51",
+      "duration": 30,
+      "createdAt": "2026-07-24T08:51:52.428Z"
+    }
+  ],
+  "records": [
+    {
+      "id": "rec-1784883123635",
+      "itemId": "item-1784883112428",
+      "categoryId": "cat-health",
+      "value": 0,
+      "note": "已延迟",
+      "dateKey": "2026-07-24",
+      "delayedTime": 1784883123635
+    },
+    {
+      "id": "rec-1784883127476",
+      "itemId": "item-water",
+      "categoryId": "cat-health",
+      "value": 1,
+      "note": "",
+      "dateKey": "2026-07-24"
+    },
+    {
+      "id": "rec-1784883134979",
+      "itemId": "item-water",
+      "categoryId": "cat-health",
+      "value": 1,
+      "note": "",
+      "dateKey": "2026-07-24"
+    },
+    {
+      "id": "rec-1784883137076",
+      "itemId": "item-sport",
+      "categoryId": "cat-health",
+      "value": 1,
+      "note": "",
+      "dateKey": "2026-07-24"
+    },
+    {
+      "id": "rec-1784883147299",
+      "itemId": "item-pomodoro",
+      "categoryId": "cat-work",
+      "value": 1,
+      "note": "",
+      "dateKey": "2026-07-24"
+    },
+    {
+      "id": "rec-1784883148019",
+      "itemId": "item-focus",
+      "categoryId": "cat-work",
+      "value": 1,
+      "note": "",
+      "dateKey": "2026-07-24"
+    },
+    {
+      "id": "rec-1784883148844",
+      "itemId": "item-write",
+      "categoryId": "cat-study",
+      "value": 1,
+      "note": "",
+      "dateKey": "2026-07-24"
+    },
+    {
+      "id": "rec-1784883156763",
+      "itemId": "item-pomodoro",
+      "categoryId": "cat-work",
+      "value": 1,
+      "note": "",
+      "dateKey": "2026-07-24"
+    }
+  ],
+  "settings": {
+    "timezone": "Asia/Shanghai",
+    "language": "zh-CN",
+    "notificationEnabled": true,
+    "remindAheadMinutes": 0,
+    "nutstore": {
+      "enabled": true,
+      "baseUrl": "https://dav.jianguoyun.com/dav/",
+      "username": "picfik@126.com",
+      "password": "am52z9kfztamvavv",
+      "remotePath": "xiaomishu/app-data.json"
+    }
+  },
+  "finance": {
+    "profile": {
+      "name": "我的财务",
+      "cash": 0
+    },
+    "assets": [],
+    "liabilities": [],
+    "incomes": [],
+    "expenses": []
+  },
+  "health": {
+    "meds": [
+      {
+        "id": "med-1784884533537",
+        "name": "dfd",
+        "dosage": "fdf",
+        "frequency": "daily",
+        "startDate": "",
+        "endDate": "",
+        "note": "",
+        "createdAt": 1784884533537
+      }
+    ],
+    "bloodPressures": [
+      {
+        "id": "bp-1784884543305",
+        "systolic": 120,
+        "diastolic": 80,
+        "pulse": 80,
+        "note": "",
+        "timestamp": 1784884543305,
+        "dateKey": "2026-07-24"
+      }
+    ],
+    "heartRates": [],
+    "weights": [],
+    "waistMeasurements": [],
+    "medicationLogs": []
+  }
+}

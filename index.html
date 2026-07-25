@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#10b981">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="小秘书">
+  <title>小秘书 - 记录生活 · 看见成长</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./assets/icon-192.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./assets/icon-192.svg">
+  <link rel="stylesheet" href="./assets/style.css">
+</head>
+<body class="min-h-screen bg-stone-50 text-ink-800">
+  <div class="min-h-screen flex flex-col lg:flex-row">
+    <aside class="desktop-sidebar w-60 flex-col border-r border-ink-100 bg-white/70 backdrop-blur-sm sticky top-0 h-screen">
+      <div class="p-6 border-b border-ink-100">
+        <h1 class="font-serif text-2xl text-ink-900 font-semibold">小秘书</h1>
+        <p class="text-xs text-ink-500 mt-1">记录生活 · 看见成长</p>
+      </div>
+      <nav class="flex-1 p-3 space-y-1">
+        <a href="#" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm" data-page="home">🏠 今日</a>
+        <a href="#" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm" data-page="timeplan">⏰ 时间规划</a>
+        <a href="#" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm" data-page="categories">📂 分类</a>
+        <a href="#" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm" data-page="trends">📊 趋势</a>
+        <a href="#" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm" data-page="finance">💰 财务</a>
+        <a href="#" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm" data-page="health">❤️ 健康</a>
+        <a href="#" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm" data-page="settings">⚙️ 设置</a>
+      </nav>
+      <div class="p-4 border-t border-ink-100">
+        <div class="flex items-center gap-1.5 text-xs text-mint-600">
+          <span class="w-2 h-2 rounded-full bg-mint-500"></span>
+          <span id="status-pill">正在加载...</span>
+        </div>
+      </div>
+    </aside>
+
+    <header class="mobile-header lg:hidden sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-ink-100">
+      <div class="flex items-center justify-between px-4 h-14">
+        <h1 class="font-serif text-lg text-ink-900 font-semibold">小秘书</h1>
+        <div class="flex items-center gap-1.5 text-xs text-mint-600">
+          <span class="w-2 h-2 rounded-full bg-mint-500"></span>
+          <span id="mobile-status-pill">加载中</span>
+        </div>
+      </div>
+    </header>
+
+    <main id="mainContent" class="flex-1 min-w-0 pb-24 lg:pb-0"></main>
+  </div>
+
+  <nav class="mobile-nav lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-ink-100 z-10 px-1.5 py-1.5">
+    <div class="flex items-stretch justify-center gap-1 w-full">
+      <a href="#" class="flex-1 max-w-[3.6rem] flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[10px] leading-3" data-page="home">🏠<span>今日</span></a>
+      <a href="#" class="flex-1 max-w-[3.6rem] flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[10px] leading-3" data-page="timeplan">⏰<span>规划</span></a>
+      <a href="#" class="flex-1 max-w-[3.6rem] flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[10px] leading-3" data-page="categories">📂<span>分类</span></a>
+      <a href="#" class="flex-1 max-w-[3.6rem] flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[10px] leading-3" data-page="trends">📊<span>趋势</span></a>
+      <a href="#" class="flex-1 max-w-[3.6rem] flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[10px] leading-3" data-page="finance">💰<span>财务</span></a>
+      <a href="#" class="flex-1 max-w-[3.6rem] flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[10px] leading-3" data-page="health">❤️<span>健康</span></a>
+      <a href="#" class="flex-1 max-w-[3.6rem] flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[10px] leading-3" data-page="settings">⚙️<span>设置</span></a>
+    </div>
+  </nav>
+
+  <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] hidden">
+    <div class="bg-white rounded-xl shadow-lg flex items-center gap-2 px-4 py-2.5">
+      <span id="toastIcon"></span>
+      <span id="toastMsg" class="text-sm text-ink-700"></span>
+    </div>
+  </div>
+
+  <div id="modalContainer"></div>
+  <script src="./assets/compat.js"></script>
+  <script src="./assets/app.js"></script>
+</body>
+</html>
